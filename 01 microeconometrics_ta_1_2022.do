@@ -378,7 +378,7 @@ mkdir "C:\Users\semma\OneDrive - Università Commerciale Luigi Bocconi\Bocconi\E
 * "echo /*.gitignore >> C:\Users\jsdmp\Desktop\micrometrics_stata\.gitignore"
 * "echo !/*.do >> C:\Users\jsdmp\Desktop\micrometrics_stata\.gitignore"
 * "echo !/*.md >> C:\Users\jsdmp\Desktop\micrometrics_stata\.gitignore"
-//is this change in the do file recorded?
+
 *
 * Commit this change and push it to your Github repository.
 *
