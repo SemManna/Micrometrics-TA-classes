@@ -420,7 +420,7 @@ quietly {
 quietly {
 	
 * Setting working directory
-cd "C:\Users\jsdmp\Desktop\micrometrics_stata\ta_1"
+cd "C:\Users\semma\OneDrive - Università Commerciale Luigi Bocconi\Bocconi\ESS\Microeconometrics\Micrometrics-TA-classes"
 *
 * Import example dataset installed with Stata
 sysuse lifeexp, clear
@@ -472,7 +472,7 @@ label variable popgrowth "average annual % growth"
 rename popgrowth pop_growth
 *
 * TASK! Use the *do file* to change:
-* - the label of *popgrowth* to "per capita GNP"; 
+* - the label of *gnppc* to "per capita GNP"; 
 * - the name of *gnppc* to *pc_gnp*. 
 *
 label variable gnppc "per capita GNP"
@@ -506,14 +506,14 @@ quietly {
 * Import example dataset installed with Stata
 sysuse auto, clear
 *
-* TIP! When combining datasets generate a *unique identifier*.
+* TIP! When combining datasets generate a **unique identifier**.
 *
 * Generate identifier for observations of file 1
 gen file=1
 * gen -> generate
 *
 * Save file 1
-save auto_copy.dta, replace
+save 01auto_copy.dta, replace
 *
 * Import again example dataset installed with Stata
 sysuse auto, clear
@@ -522,10 +522,10 @@ sysuse auto, clear
 gen file=2
 *
 * Append file 2 onto file 1
-append using "auto_copy.dta"
+append using "01auto_copy.dta"
 *
 * Save appended file
-save auto_copy_double.dta, replace
+save 01auto_copy_double.dta, replace
 
 }
 
@@ -534,21 +534,21 @@ save auto_copy_double.dta, replace
 quietly {
 	
 * Import appended file
-use auto_copy_double.dta, replace
-use "C:\Users\jsdmp\Desktop\micrometrics_stata\ta_1\auto_copy_double.dta", clear
+use 01auto_copy_double.dta, replace
+use "C:\Users\semma\OneDrive - Università Commerciale Luigi Bocconi\Bocconi\ESS\Microeconometrics\Micrometrics-TA-classes\01auto_copy_double.dta", clear
 *
 * Proceeding with the identifier variable "make"
 *
 * Merge appended file with file 1
 * NOTE! Pre-specifying that in each file *make* is a unique identifier (1-to-1).
-merge 1:1 make using "auto_copy.dta"
+merge 1:1 make using "01auto_copy.dta"
 * ERROR! In the master (appended) file the variable make does not uniquely
 * identify observations. In fact:
 distinct make
 *
 * Merge appended file with file 1
 * NOTE! Pre-specifying that in the master file *make* is not a unique identifier (m-to-1).
-merge m:1 make using "auto_copy.dta"
+merge m:1 make using "01auto_copy.dta"
 *
 * TIP! Browse observations that were *not merged* and take note.
 br if _merge!=3
@@ -563,7 +563,7 @@ br if _merge==2
 * - Collapse the data at the level of a unique identifier.  
 *
 * Import appended file
-use auto_copy_double.dta, replace
+use 01auto_copy_double.dta, replace
 *
 * Count number of unique values taken by variable *make*
 distinct make
@@ -573,7 +573,7 @@ duplicates drop make, force
 *
 * Merge appended file with file 1
 * NOTE! Pre-specifying that in each file *make* is a unique identifier (1-to-1).
-merge 1:1 make using "auto_copy.dta"
+merge 1:1 make using "01auto_copy.dta"
 *
 br
 
@@ -626,8 +626,7 @@ scalar list sample_size
 *
 * INFO! The OLS estimate of the effect of safewater on lexp is .184967:
 reg lexp popgrowth gnppc safewater
-* Also, * the *standardized effect* is defined as the effect of one s.d. change in x (safewater)
-* measured in terms of a s.d. of y (lexp)
+* Also, * the *standardized effect* is defined as the effect of one s.d. change in x (safewater) measured in terms of a s.d. of y (lexp)
 *
 reg lexp popgrowth gnppc safewater
 return list
@@ -675,7 +674,7 @@ local reg_local "price mpg length"
 sum `reg_local'
 *
 * NOTE! Locals must be defined in the same block of code where they are used
-* NOTE! Use ` ' to call a local.
+* NOTE! Use `  to call a local.
 *
 * TIP! Input dataframe content to vectors and matrices through local variables.
 * 
