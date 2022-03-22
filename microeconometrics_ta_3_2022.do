@@ -154,26 +154,26 @@ ivreg2 wage (union= black south age) wks_work ttl_exp not_smsa grade age1-age13,
 *
 reg wage black south age wks_work ttl_exp not_smsa grade, robust
 *
-* NOTE! Restrict the reduced form model to the same set of observations than
-* that used with *ivreg2*.
+* NOTE! Restrict the reduced form model to the same set of observations than that used with *ivreg2*.  --> make sure to exclude missing values!
 reg wage black south age wks_work ttl_exp not_smsa grade if union!=., robust
+*
 *
 *
 ** IV regression "by hand":
 *
 * First stage:
 reg union black south age wks_work ttl_exp not_smsa grade, robust
-*
+//estimate the first stage
 * Predict the endogenous variable:
 predict double unionhat 
+//predict endogenous variable (union memebrship) from the first stage
 *
-* Next regression does not work because there are some missing 
-* in union but these missing get predicted through unionhat
+* Next regression does not work because there are some missing values in union but these missing get predicted through unionhat!
 reg wage unionhat wks_work ttl_exp not_smsa grade, robust
 *
 * This one replicates results (coefficients!) from ivreg2:
 reg wage unionhat wks_work ttl_exp not_smsa grade if union!=., robust
-
+//restrict yourself to the sample where the endogenous covariate does not have missing values
 }
 
 
@@ -182,9 +182,7 @@ reg wage unionhat wks_work ttl_exp not_smsa grade if union!=., robust
 ** TIP! USEFUL FOR QUESTIONS 2 AND (IN PARTICULAR) 3 OF EXERCISE 1.
 quietly {
 	
-* NOTE! Imagine that you want to have a table where you go through your
-* whole IV routine and you add important information about each step
-* as you go along estimating regressions.
+* NOTE! Imagine that you want to have a table where you go through your whole IV routine and you add important information about EACH STEP as you go along estimating regressions.
 *
 * Estimate the outcome mean.
 sum wage
@@ -192,136 +190,131 @@ scalar mean_y = r(mean)
 *
 * Start a table with OLS so that the reader understands the OLS bias.
 reg wage union wks_work ttl_exp not_smsa grade, robust
-outreg2 using table.xls, excel replace keep(union) nocons addtext(Controls, YES, Reg, OLS) addstat("Outcome mean", mean_y)
+outreg2 using table.xls, excel replace keep(union) nocons addtext(Controls, YES, Reg, OLS) addstat("Outcome mean", mean_y) //adding also the outcome mean statistic to the table with the OLS
 *
 * Estimate the first stage to argue for relevance.
+//Using FIRST and SAVEFIRST
 ivreg2 wage (union= black south age) wks_work ttl_exp not_smsa grade, robust first savefirst
-scalar F_weak = e(widstat)
-est restore _ivreg2_union
-outreg2 using table.xls, excel append keep(black south age) nocons addtext(Controls, YES, Reg, First Stage) addstat("F-statistic instruments", F_weak)
+scalar F_weak = e(widstat) //creating scalar with the F stat from the IVreg
+est restore _ivreg2_union //restore first stage
+outreg2 using table.xls, excel append keep(black south age) nocons addtext(Controls, YES, Reg, First Stage) addstat("F-statistic instruments", F_weak) //output the first stage!
 *
 * Estimate a reduced form model, to argue for validity and hint about the sign and magnitude of IV estimates.
+//show reduced form regression for sake of completness, remember to exclude missing values!
 reg wage black south age wks_work ttl_exp not_smsa grade if union!=.
 outreg2 using table.xls, excel append keep(black south age) nocons addtext(Controls, YES, Reg, Reduced Form) 
 *
-* Estimate the second stage.
+* Estimate the second stage. 
+//No est restore here, we want to get the second stage and finally look at the IV regression
 ivreg2 wage (union= black south age) wks_work ttl_exp not_smsa grade age1-age13, robust
 outreg2 using table.xls, excel append keep(union) nocons addtext(Controls, YES, Reg, IV) 
 
+//note, the table has four rows, one for union and 3 for the 3 instruments, first column the biased OLS, then the relevance of the instrument where the dependent variable is the endogenous covariate (union memebrship) with an F-stat above the rule of thumb of 10 - relevant IVs. Then we try to show that the excluion restriction holds (the effects in the reduced form should be aligned with the reduced form should be aligned with the secnd stage, if they are not we may have heterogeneity and other issues impacting the interpretation of the IV estimate) and lastly we estimate the IV regression
 }
 
 
 **#3 - Introduction to *reshape* ***
-*
-** TIP! IMPORTANT TO UNDERSTAND DO-
-** FILE ASSOCIATED TO EXERCISE 2.
+*long to wide dataframes and vice-versa
+** TIP! IMPORTANT TO UNDERSTAND DO-FILE ASSOCIATED TO EXERCISE 2.
 quietly {
 
 ** Reshaping dataframes  **
+
+* NOTE! Dataframes can be formatted as *long* or *wide* datasets.
+*
+* An example for a *long* dataframe is a panel data set with cross sectional and temporal units.
+*
+* An example for a *wide* dataframe is a cross sectional data set with different lagged variables.
+
+//two main forms of dataset in stata, 
+*LONG - corss-sectional and temporal unit are both organized vertically (eg. on the columns we have first obs for unit 1, second obs for unit 1... T^th obs for unit 1, first obs for unit 2, second obs for unit 2... - OR could also be the opposite, first the temporal then the cross sectional such as first obs unit 1, first obs unit 2 ..first obs unit N, second obs unit 1....) - and WIDE - you have individuals on the vertical dimension and on the horizontal one a variable per each dimension, indexed by the year (eg. Italy / GDP2000 GDP2001 GDP2002 ecc)
+*WIDE format is particulary useful for matrix formulas (eg. averages over units or years) but normally dataset are grouped over LONG datasets
 *
 * Import an example dataset
-*
-* CONTEXT! Here we will use electoral outcomes in the U.S. presidential
-* elections, focused on popular vote by state, from 2000 to 2016. 
+* CONTEXT! Here we will use electoral outcomes in the U.S. presidential elections, focused on popular vote by state, from 2000 to 2016. 
 use example_reshape.dta, clear
 *
 * Describe dataframe
 describe
-*
 * Examine dataframe format
 *
-* Press the results window and type CTRL+8 (See Window > Data Editor)
-* or type the commands "browse" or "edit" (depending on the Data Editor mode you want)
-*
+* Press the results window and type CTRL+8 (See Window > Data Editor) or type the commands "browse" or "edit" (depending on the Data Editor mode you want)
+br
+//we have years in the first column and state (i) in the second one
 * Examine temporal dimension
 tab year
-list if state=="AL"
-*
-* NOTE! Dataframes can be formatted as *long* or *wide* datasets. 
+list if state=="AL" 
 *
 * Read the *help* file for *reshape*
 help reshape
 *
-* An example for a *long* dataframe is a panel data set 
-* with cross sectional and temporal units.
-*
-* An example for a *wide* dataframe is a cross sectional data set
-* with different lagged variables.
-*
 * QUESTION! What is the format of the current dataframe?
+* ANSWER! The current dataframe is organized as a panel, with 51 cross-sectional units and 5 temporal units.
 *
-* ANSWER! The current dataframe is organized as a panel, 
-* with 51 cross-sectional units and 5 temporal units.
 *
 * Converting data from a *long* to a *wide* format
 reshape wide rep_popular_vote dem_popular_vote others_popular_vote total_popular_vote, i(state) j(year)
+//reshaping EVERY variable OTHER THAN the cross sectional and temporal variables and then specifying what do we want out cross sectional variabl to be and out temporal one to be (bear in mind, they can be switched!)
 list if state=="AL"
 *
-* NOTE! We now have popular vote variables for each different election. 
-* In a *wide* format we are able to easily compute averages for different
-* sets of elections. Hence, through *reshape* we can alter our data frames
-* to ease average computation and other tasks.
+* NOTE! We now have popular vote variables for each different election. In a *wide* format we are able to easily compute AVERAGES for different sets of elections. Hence, through *reshape* we can alter our data frames to ease average computation and other tasks.
 *
+*easily computing average republican popular vote for the first decade of this century and then 2012 and 2016, for each State
 gen rep_popvote_avg_dec_00 = .333*(rep_popular_vote2000 + rep_popular_vote2004 + rep_popular_vote2008)
 gen rep_popvote_avg_dec_10 = .5*(rep_popular_vote2012 + rep_popular_vote2016)
-
+*
 summ rep_popvote_avg_dec_00 rep_popvote_avg_dec_10
-
+*
+*
 * Re-converting data from a *wide* to a *long* format
 reshape long rep_popular_vote dem_popular_vote others_popular_vote total_popular_vote, i(state) j(year)
-
+//restoring long format, computed averages are 'taken out' and replicated, within each state for each year! 
 }
 
 
 **# 4 - Computing averages from microdata ***
 *
-** TIP! IMPORTANT TO UNDERSTAND DO-
-** FILE ASSOCIATED TO EXERCISE 2.
+** TIP! IMPORTANT TO UNDERSTAND DO-FILE ASSOCIATED TO EXERCISE 2.
 quietly {
 
-* NOTE! It is not common to have publicly available descriptive statistics 
-* for your *unit* of analysis. Changing *unit* is instead common in micro-
-* econometric studies. It is thus important to understand how can a researcher
-* rapidly compute descriptive statistics for multiple units of analysis.
+* NOTE! It is not common to have publicly available descriptive statistics for your *unit* of analysis. 
+*Changing *unit* is instead common in micro-econometric studies. It is thus important to understand how can a researcher rapidly compute descriptive statistics for multiple units of analysis.
 *
 ** Switching *unit of analysis **
 *
 * Import an example dataset
-*
-* CONTEXT! Here we will use data from a 1991 survey on literacy and educational 
-* outcomes, held in different cities and covering close to 1.3M individuals. 
+* CONTEXT! Here we will use data from a 1991 survey on literacy and educational outcomes, held in different cities and covering close to 1.3M individuals. Best example of microdata
 use example_averages, replace
 *
 * Describe dataframe
 describe
 *
-* EXAMPLE! While using panel data, with city-level data variation (according to 
-* the 1991 census definition), you are required to compare statistics with 
-* recent city-level census definitions. These are different and are not compara-
-* ble. If you are to accurately compare statistics across different definitions, 
-* then, you are required to change your *unit* of analysis while computing 
-* statistics of interest. 
+* EXAMPLE! While using panel data, with city-level data variation (according to the 1991 census definition), you are required to compare statistics with recent city-level census definitions. These are different and are not comparable. If you are to accurately compare statistics across different definitions, then, you are required to change your *unit* of analysis while computing statistics of interest. 
+//we have informatino about individuals which depends on a geographical unit changing over time. We want to compute averages within geographical units
 *
-* Install *ado* which allows you to generate weighted averages
+*
+* Install *ado* which allows you to generate weighted averages!
 ssc inst _gwtmean, replace 
 help gwtmean
 *
-* NOTE! Census observations have *sample weights*. These must be accounted for
-* when computing city-level averages. Hence installing *wtmean*.
+* NOTE! Census observations have *sample weights*. These must be accounted for when computing city-level averages. Hence installing *wtmean*.
 *
-* TASK! Construct a city-level data set with the percentage of illiterate people 
-* and average years of education using the 1991 city census definition. Construct
-* an identical data set while using the 2010 city census definition.
+* TASK! Construct a city-level data set with the percentage of illiterate people and average years of education using the 1991 city census definition. 
+*Construct an identical data set while using the 2010 city census definition.
 *
 * 1991's census definition
 use example_averages, replace
-egen perc_illiterate_def_1 = wtmean(illiterate), by(city_id_1991) weight(weight_person)
+egen perc_illiterate_def_1 = wtmean(illiterate), by(city_id_1991) weight(weight_person) 
+//gen a var using a the weighted mean function for the mean of illiterate by city (according to 1991 id) and using our weights. Since the var is a dummy, the avg is a proportion
 egen avg_educ_def_1 = wtmean(school_years), by(city_id_1991) weight(weight_person)
-duplicates drop city_id_1991, force
+duplicates drop city_id_1991, force 
+//now we have city-level averages duplicated for each individual in that city. We only want to keep city-level data, so we drop individual obs via dropping al duplicates of city id to have only city level averages.
 sum perc_illiterate_def_1 avg_educ_def_1
 save data_city_id_1991, replace
+//saving this modified sataframe
 *
 * 2010's census definition
+//same but using the 2010 census definition
 use example_averages, replace
 egen perc_illiterate_def_2 = wtmean(illiterate), by(city_id_2010) weight(weight_person)
 egen avg_educ_def_2 = wtmean(school_years), by(city_id_2010) weight(weight_person)
@@ -330,19 +323,24 @@ sum perc_illiterate_def_2 avg_educ_def_2
 save data_city_id_2010, replace
 *
 * QUESTION! Are you able to perform these tasks without opening the data frame twice?
-* ANSWER! Yes, through *preserve* and *restore*. We will see in a few minutes. 
+* ANSWER! Yes, through *preserve* and *restore*. We will see in a few minutes. (//collpase seems much more concise for simple operations)
 *
+//we could compute these means, alterig our dataframe, restoring the original dataframe with individual observatinos at God's speed. Reloading large datasets could take a lot of time when using vast administrative dataframes
 * NOTE! We can perform the same task easily through one Stata command - *collapse*.
 *
 * 1991's census definition
 use example_averages, replace
 help collapse
 collapse (mean) illiterate school_years [pw=weight_person], by(city_id_1991)
+//collpase dataframe to the 68 observations of the different cities with the mean for the variables of interest weighted according to the weight variable within the city-unit specified with the by option
+*
+//note, here we did not create a new variable for the mean function in the dataframe! The means are under the variables themselves in this modified dataframe, we need to rename them!
 *
 rename illiterate perc_illiterate_def_1
 rename school_years avg_educ_def_1
 sum perc_illiterate_def_1 avg_educ_def_1
 save data_city_id_1991, replace
+//again, adding preserve (at the beginning) and restore (here) we could run all this, quickly getting back to the original dataframe. In this case we would not even need to rename the variables.
 
 * 2010's census definition
 use example_averages, replace
@@ -355,22 +353,21 @@ save data_city_id_2010, replace
 *
 ** Computing averages from microdata **
 *
-* TASK! Compute descriptive statistics for a subpopulation of interest. In particular,
-* compute which proportion of children between 6 and 18 attends school.
+* TASK! Compute descriptive statistics for a subpopulation of interest. In particular, compute which proportion of children between 6 and 18 that attends school.
 *
 use example_averages, replace
 gen dum_school_age=(age>=6 & age<18)
-* In this way, dum_school_age=1 if child is in that age range; =0 if younger/older
+* In this way, dum_school_age=1 if child is in that age range; =0 if younger/older !!
 *
 gen aux_1=dum_school_age*attend_school
 gen aux_2=dum_school_age*weight_person
 * These two aux are multiplied by a dummy: 
 * they are =0 if they refer to a person outside the age range of interest
 *
-egen perc_attend_school_6_to_18  = wtmean(aux_1), by(city_id_1991) weight(aux_2)
+egen perc_attend_school_6_to_18  = wtmean(aux_1), by(city_id_1991) weight(aux_2) //weighted mean, wieght is aux 3
 drop aux_1 aux_2
 *
-* NOTE! We can also perform the same task easily through *collapse*.
+* NOTE! We can also perform the same task easily through *collapse*. More elegantly perhaps.
 *
 use example_averages, replace
 keep if age>=6 & age<18
@@ -399,14 +396,15 @@ quietly {
 use example_averages, replace
 *
 * 1991's census definition
-preserve 
+preserve //freezes dataframe in the memory before perfomring operations
 	egen perc_illiterate_def_1 = wtmean(illiterate), by(city_id_1991) weight(weight_person)
 	egen avg_educ_def_1 = wtmean(school_years), by(city_id_1991) weight(weight_person)
 	duplicates drop city_id_1991, force
 	sum perc_illiterate_def_1 avg_educ_def_1
 	save data_city_id_1991, replace
-restore 
+restore //restoring when frozen
 *
+//we still have out original dataframe, and we saved the modified one!
 ** 2010's census definition
 preserve 
 	egen perc_illiterate_def_2 = wtmean(illiterate), by(city_id_2010) weight(weight_person)
@@ -439,58 +437,47 @@ restore
 ** FILE ASSOCIATED TO EXERCISE 2.
 quietly {
 
-* NOTE! In Goldsmith-Pinkham et al.'s do-file "make_rotemberg_summary_ADH.do"
-* you will notice different types of Stata objects that we have not discussed
-* until now.
+* NOTE! In Goldsmith-Pinkham et al.'s do-file "make_rotemberg_summary_ADH.do" - impact of China shock on labour outcomes
+* you will notice different types of Stata objects that we have not discussed until now.
 *
-* For instance, *bartik_weights* and *ch_weak* are two commands that are used
-* in that dof-file, for which you can find two separate .ado files in the 
-* folder we provided you with. In these .ado files you will then find 
-* references to *program* and *mata*.
+* For instance, *bartik_weights* and *ch_weak* are two commands that are used in that dof-file, for which you can find two separate .ado files in the folder we provided you with. In these .ado files you will then find references to *program* and *mata*.
+// ch_weak to understand what it is look at the notes on the table we are asked to replicate (in the appendix of the Goldsmith-Pinkham paper). There we have the definition of ch_weak to compute confidence intervals with weak instruments
 *
 * What is an .ado file?
 *
-* An .ado file is a file that defines a Stata command. You can find more infor-
-* mation about what is an .ado file, which Stata commands are ran from .ado
-* files and how can you write and/or install an .ado file here:
-*
+* An .ado file is a file that defines a Stata command. 
+// as a general notion, it is a file which contains a program for a particular command or function that we want to call in our do-files, especially if needed repeatedly
+*You can find more information about what is an .ado file, which Stata commands are ran from .ado files and how can you write and/or install an .ado file here:
 * https://www.stata.com/manuals13/u17.pdf
 *
 *
 * What is a *program*?
 *
-* A *program* is nothing else than a function, a routine that you repeatedly
-* follow with different data, or in a particular project, that you wish to
-* implement without having to have multiple lines of code cluttering your
-* do-file.
+* A *program* is nothing else than a function, a routine that you repeatedly follow with different data, or in a particular project, that you wish to implement without having to have multiple lines of code cluttering your do-file.
+//function that you call many times to repeat some algorithm that you need at different points
 *
 * TIP! Write *program*s in a general manner, so that you can use your functions
 * in different contexts, with no need to re-write them at every project that you
 * work on.
 *
 * You can find an extensive guide on programming in Stata here:
-*
 * https://www.stata.com/manuals/u18.pdf
 *
 * What is *mata*?
 * 
 * Putting it succintly, citing a blog post from Stata employees:
+* "Mata is a full-blown programming language that compiles what you type into bytecode, optimizes it, and executes it fast."
+//provide mathematical operations to your computer in ways that can be computed very fast
 *
-* "Mata is a full-blown programming language that compiles what you type into 
-* bytecode, optimizes it, and executes it fast."
-* 
-* in "https://www.stata.com/features/overview/introduction-to-mata/"
+* more useful info on "https://www.stata.com/features/overview/introduction-to-mata/"
 *
-* We will not dive into *mata* during this TA neither during the course, still,
-* we wanted to leave you with some references that might come in handy if you
-* are asked in a near future to implement a new econometric method/algorithm 
-* in Stata:
+* We will not dive into *mata* during this TA neither during the course, still, we wanted to leave you with some references that might come in handy if you are asked in a near future to implement a new econometric method/algorithm  in Stata:
 *
 * Asjad Naqvi's Medium post introducing *mata*:
-* https://medium.com/the-stata-guide/mata-statas-end-game-5983c0ee11bd
+*https://medium.com/the-stata-guide/mata-statas-end-game-5983c0ee11bd
 *
 * Christopher Baum's *mata* tutorial:
-* https://www.stata.com/meeting/germany09/baum.pdf
+*https://www.stata.com/meeting/germany09/baum.pdf
 *
 * Stata's *mata* manual:
 * https://www.stata.com/manuals/m.pdf
