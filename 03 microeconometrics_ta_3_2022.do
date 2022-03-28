@@ -102,8 +102,7 @@ describe
 //then we may want to estimate the impact of union membership on wages through an instrumental variable
 *
 * Assume that *black south age* are valid instruments (//hence in this setting they are 1) relevant - actually explain the endogenous covariate, union memebrship - 2) exclusion restriction - they affact the dependent variable only through union memebrship and not through other channels which we are not controlling).
-* Estimate the effect of *union* on *wages* using *black south age* as 
-* instruments for *union* and *wks_work ttl_exp not_smsa grade* as controls. 
+* Estimate the effect of *union* on *wages* using *black south age* as instruments for *union* and *wks_work ttl_exp not_smsa grade* as controls. 
 *
 ivreg2 wage (union= black south age) wks_work ttl_exp not_smsa grade, robust
 //syntax similar to a normal regression, dependent variable first but then the variable you is being instrumented must be inserted between round brakets with the instruments after the equal sign
@@ -192,19 +191,19 @@ scalar mean_y = r(mean)
 reg wage union wks_work ttl_exp not_smsa grade, robust
 outreg2 using table.xls, excel replace keep(union) nocons addtext(Controls, YES, Reg, OLS) addstat("Outcome mean", mean_y) //adding also the outcome mean statistic to the table with the OLS
 *
-* Estimate the first stage to argue for relevance.
+* Estimate the FIRST STAGE to argue for relevance.
 //Using FIRST and SAVEFIRST
 ivreg2 wage (union= black south age) wks_work ttl_exp not_smsa grade, robust first savefirst
 scalar F_weak = e(widstat) //creating scalar with the F stat from the IVreg
 est restore _ivreg2_union //restore first stage
 outreg2 using table.xls, excel append keep(black south age) nocons addtext(Controls, YES, Reg, First Stage) addstat("F-statistic instruments", F_weak) //output the first stage!
 *
-* Estimate a reduced form model, to argue for validity and hint about the sign and magnitude of IV estimates.
+* Estimate a REDUCED FORM model, to argue for validity and hint about the sign and magnitude of IV estimates.
 //show reduced form regression for sake of completness, remember to exclude missing values!
 reg wage black south age wks_work ttl_exp not_smsa grade if union!=.
 outreg2 using table.xls, excel append keep(black south age) nocons addtext(Controls, YES, Reg, Reduced Form) 
 *
-* Estimate the second stage. 
+* Estimate the SECOND STAGE. 
 //No est restore here, we want to get the second stage and finally look at the IV regression
 ivreg2 wage (union= black south age) wks_work ttl_exp not_smsa grade age1-age13, robust
 outreg2 using table.xls, excel append keep(union) nocons addtext(Controls, YES, Reg, IV) 
@@ -437,8 +436,7 @@ restore
 ** FILE ASSOCIATED TO EXERCISE 2.
 quietly {
 
-* NOTE! In Goldsmith-Pinkham et al.'s do-file "make_rotemberg_summary_ADH.do" - impact of China shock on labour outcomes
-* you will notice different types of Stata objects that we have not discussed until now.
+* NOTE! In Goldsmith-Pinkham et al.'s do-file "make_rotemberg_summary_ADH.do" - impact of China shock on labour outcomes you will notice different types of Stata objects that we have not discussed until now.
 *
 * For instance, *bartik_weights* and *ch_weak* are two commands that are used in that dof-file, for which you can find two separate .ado files in the folder we provided you with. In these .ado files you will then find references to *program* and *mata*.
 // ch_weak to understand what it is look at the notes on the table we are asked to replicate (in the appendix of the Goldsmith-Pinkham paper). There we have the definition of ch_weak to compute confidence intervals with weak instruments
